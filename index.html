@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aloe 南森町院 空き時間チェック</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500&family=Noto+Sans+JP:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --white: #FFFFFF;
+  --gold: #C9A96E;
+  --gold-light: #E8D5B0;
+  --gold-pale: #FAF6EE;
+  --black: #1C1C1A;
+  --gray: #7A7A72;
+  --gray-light: #EBEBEA;
+  --open-color: #6BA888;
+  --open-bg: #F2F8F5;
+  --few-color: #C9A96E;
+  --few-bg: #FAF5EC;
+  --closed-color: #B8B0A8;
+  --closed-bg: #F6F5F4;
+  --admin-bg: #1C1C1A;
+  --admin-gold: #C9A96E;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background-color: #fff !important; font-family: 'Noto Sans JP', sans-serif; background: var(--white); color: var(--black); min-height: 100vh; font-weight: 300; }
+
+/* ─── VIEWS ─── */
+.view { display: none; }
+.view.active { display: block; }
+
+/* ─── PATIENT VIEW ─── */
+#patientView { padding-bottom: 120px; }
+
+header {
+  padding: 10px 18px;
+  border-bottom: 1px solid var(--gold-light);
+  background: var(--white);
+  position: sticky; top: 0; z-index: 50;
+  display: flex; align-items: center; gap: 14px;
+}
+.header-logo { display: flex; flex-direction: column; gap: 2px; flex-shrink: 0; }
+.header-address { font-size: 8.5px; color: var(--gray); letter-spacing: 0.03em; line-height: 1.5; }
+.header-clinic { font-family: 'Noto Sans JP', sans-serif; font-size: 14px; font-weight: 500; letter-spacing: 0.08em; color: var(--black); }
+.header-divider { width: 1px; height: 30px; background: var(--gold-light); flex-shrink: 0; }
+.header-page { display: flex; flex-direction: column; gap: 2px; }
+.header-page-en { font-family: 'Cormorant Garamond', serif; font-size: 11px; font-style: italic; color: var(--gold); letter-spacing: 0.12em; }
+.header-page-ja { font-size: 8.5px; color: var(--gray); letter-spacing: 0.08em; }
+
+
+
+.loading-screen {
+  position: fixed; inset: 0; background: #fff;
+  z-index: 999; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 16px;
+  transition: opacity 0.4s;
+}
+.loading-screen.hide { opacity: 0; pointer-events: none; }
+.loading-logo {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 22px; letter-spacing: 0.2em; color: var(--black);
+}
+.loading-logo span { color: var(--gold); }
+.loading-bar {
+  width: 48px; height: 2px; background: var(--gray-light);
+  border-radius: 2px; overflow: hidden;
+}
+.loading-bar-inner {
+  height: 100%; width: 0%; background: var(--gold);
+  border-radius: 2px; animation: loadbar 1.2s ease forwards;
+}
+@keyframes loadbar { to { width: 100%; } }
+.loading-sub {
+  font-size: 9px; letter-spacing: 0.2em; color: var(--gray);
+  text-transform: uppercase;
+}
+.member-banner {
+  background: var(--black);
+  color: var(--gold);
+  text-align: center;
+  padding: 8px;
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  font-family: 'Noto Sans JP', sans-serif;
+  font-weight: 400;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+.member-icon { font-size: 8px; }
+.week-nav { background: #fff;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 20px 8px;
+}
+.week-label { font-family: 'Cormorant Garamond', serif; font-size: 15px; letter-spacing: 0.08em; }
+.nav-btn {
+  width: 34px; height: 34px; border-radius: 50%;
+  border: 1px solid var(--gold-light); background: none;
+  color: var(--gold); font-size: 18px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.2s;
+}
+.nav-btn:hover { background: var(--gold-pale); }
+.nav-btn:disabled { opacity: 0.3; pointer-events: none; }
+
+.legend { background: #fff;
+  display: flex; gap: 12px; justify-content: flex-end;
+  padding: 0 20px 10px;
+}
+.legend-item { display: flex; align-items: center; gap: 4px; font-size: 9px; color: var(--gray); letter-spacing: 0.06em; }
+.ldot { width: 7px; height: 7px; border-radius: 50%; }
+
+.calendar { padding: 0 14px; background: #fff; min-height: 100vh; }
+.day-block { margin-bottom: 8px; border: 1px solid var(--gray-light); border-radius: 12px; overflow: hidden; background: #fff; }
+.day-head {
+  padding: 8px 14px; background: #FAFAF8;
+  display: flex; align-items: baseline; gap: 8px;
+  border-bottom: 1px solid var(--gold-light);
+}
+.day-name { font-family: 'Cormorant Garamond', serif; font-size: 13px; font-weight: 500; letter-spacing: 0.06em; font-style: italic; color: var(--gold); }
+.day-date { font-size: 11px; color: var(--black); letter-spacing: 0.04em; font-weight: 400; }
+.day-date.today { color: var(--gold); font-weight: 500; }
+
+.slots { display: grid; grid-template-columns: repeat(4,1fr); gap: 6px; padding: 10px; }
+.slot {
+  border-radius: 8px; padding: 9px 4px; text-align: center;
+  cursor: pointer; border: 1.5px solid transparent;
+  transition: all 0.16s; -webkit-tap-highlight-color: transparent;
+}
+.slot-t { font-size: 12px; font-weight: 400; letter-spacing: 0.03em; display: block; }
+.slot-s { font-size: 8px; letter-spacing: 0.06em; display: block; margin-top: 2px; }
+
+.slot.open { background: var(--open-bg); color: var(--open-color); }
+.slot.open:hover, .slot.open.sel {
+  background: var(--open-color); color: #fff;
+  transform: scale(1.04); box-shadow: 0 4px 14px rgba(107,168,136,0.28);
+}
+.slot.few { background: var(--few-bg); color: var(--few-color); }
+.slot.few:hover, .slot.few.sel {
+  background: var(--few-color); color: #fff;
+  transform: scale(1.04); box-shadow: 0 4px 14px rgba(201,169,110,0.28);
+}
+.slot.closed { background: var(--closed-bg); color: var(--closed-color); pointer-events: none; }
+.slot.last-badge .slot-s { color: inherit; font-weight: 500; }
+
+.day-off { padding: 13px 14px; font-size: 11px; color: var(--closed-color); text-align: center; letter-spacing: 0.05em; background: #fff; }
+
+/* Bottom banner */
+.bottom-banner {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: var(--white); border-top: 1px solid var(--gold-light);
+  padding: 14px 18px 26px;
+  transform: translateY(110%); transition: transform 0.3s ease;
+  z-index: 100; box-shadow: 0 -6px 24px rgba(0,0,0,0.07);
+}
+.bottom-banner.show { transform: translateY(0); }
+.bb-label { font-size: 9px; letter-spacing: 0.2em; color: var(--gray); text-transform: uppercase; margin-bottom: 5px; }
+.bb-time { font-family: 'Cormorant Garamond', serif; font-size: 19px; letter-spacing: 0.06em; margin-bottom: 12px; }
+.btn-line {
+  width: 100%; padding: 14px; background: #06C755; color: #fff;
+  border: none; border-radius: 10px; font-family: 'Noto Sans JP', sans-serif;
+  font-size: 13px; letter-spacing: 0.12em; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  transition: opacity 0.2s;
+}
+.btn-line:hover { opacity: 0.87; }
+.line-circle {
+  width: 20px; height: 20px; border-radius: 50%; background: #fff;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+
+/* Modal */
+.overlay {
+  position: fixed; inset: 0; background: rgba(28,28,26,0.5);
+  z-index: 200; display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+  opacity: 0; pointer-events: none; transition: opacity 0.25s;
+}
+.overlay.show { opacity: 1; pointer-events: all; }
+.modal {
+  background: var(--white); border-radius: 18px;
+  padding: 28px 22px 28px; width: 100%; max-width: 420px;
+  transform: translateY(20px); transition: transform 0.25s;
+  max-height: 88vh; overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.overlay.show .modal { transform: translateY(0); }
+.modal-title { font-family: 'Cormorant Garamond', serif; font-size: 19px; text-align: center; letter-spacing: 0.08em; margin-bottom: 6px; }
+.modal-sub { font-size: 11px; color: var(--gray); text-align: center; letter-spacing: 0.04em; line-height: 1.7; margin-bottom: 18px; }
+.modal-time { background: var(--gold-pale); border-radius: 9px; padding: 12px; text-align: center; font-family: 'Cormorant Garamond', serif; font-size: 17px; letter-spacing: 0.07em; margin-bottom: 16px; }
+.btn-confirm {
+  width: 100%; padding: 14px; background: #06C755; color: #fff;
+  border: none; border-radius: 10px; font-family: 'Noto Sans JP', sans-serif;
+  font-size: 13px; letter-spacing: 0.1em; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  margin-bottom: 10px; transition: opacity 0.2s;
+}
+.btn-confirm:hover { opacity: 0.87; }
+.btn-cancel {
+  width: 100%; padding: 12px; background: none;
+  border: 1px solid var(--gray-light); border-radius: 10px;
+  font-family: 'Noto Sans JP', sans-serif; font-size: 12px;
+  color: var(--gray); letter-spacing: 0.08em; cursor: pointer;
+}
+
+.menu-select { margin-bottom: 14px; }
+.menu-label { font-size: 9px; color: var(--gold); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; display: block; }
+.menu-options { display: flex; flex-direction: column; gap: 8px; }
+.menu-option {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 14px; border: 1.5px solid var(--gray-light);
+  border-radius: 10px; cursor: pointer; transition: all 0.15s;
+  font-size: 13px; color: var(--black); letter-spacing: 0.04em;
+  -webkit-tap-highlight-color: transparent;
+}
+.menu-option:hover { border-color: var(--gold-light); background: var(--gold-pale); }
+.menu-option.selected { border-color: var(--gold); background: var(--gold-pale); }
+.menu-radio {
+  width: 16px; height: 16px; border-radius: 50%;
+  border: 1.5px solid var(--gray-light); flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+}
+.menu-option.selected .menu-radio {
+  border-color: var(--gold); background: var(--gold);
+}
+.menu-option.selected .menu-radio::after {
+  content: ''; width: 6px; height: 6px;
+  border-radius: 50%; background: #fff;
+}
+.copy-box {
+  background: #F8F8F6; border: 1px solid var(--gold-light);
+  border-radius: 10px; padding: 14px; margin-bottom: 14px;
+  position: relative;
+}
+.copy-label { font-size: 9px; color: var(--gold); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; display: flex; align-items: center; gap: 5px; }
+.copy-text { font-family: 'Cormorant Garamond', serif; font-size: 15px; color: var(--black); line-height: 1.7; letter-spacing: 0.04em; white-space: pre-line; }
+.btn-copy {
+  width: 100%; padding: 13px; background: var(--black); color: #fff;
+  border: none; border-radius: 10px; font-family: 'Noto Sans JP', sans-serif;
+  font-size: 12px; letter-spacing: 0.12em; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+  margin-bottom: 10px; transition: opacity 0.2s;
+}
+.btn-copy:hover { opacity: 0.82; }
+.btn-copy.copied { background: var(--open-color); }
+.copy-hint { font-size: 9px; color: var(--gray); text-align: center; letter-spacing: 0.06em; margin-bottom: 14px; line-height: 1.6; }
+
+/* Sent */
+.sent-screen {
+  position: fixed; inset: 0; background: var(--white); z-index: 300;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+  opacity: 0; pointer-events: none; transition: opacity 0.35s;
+}
+.sent-screen.show { opacity: 1; pointer-events: all; }
+.sent-icon { width: 58px; height: 58px; border-radius: 50%; background: var(--open-bg); display: flex; align-items: center; justify-content: center; font-size: 26px; }
+.sent-title { font-family: 'Cormorant Garamond', serif; font-size: 21px; letter-spacing: 0.1em; }
+.sent-body { font-size: 11px; color: var(--gray); text-align: center; line-height: 1.8; letter-spacing: 0.04em; }
+.sent-note { font-size: 10px; color: var(--gold); letter-spacing: 0.04em; }
+
+/* ─── ADMIN VIEW ─── */
+#adminView {
+  background: var(--admin-bg); min-height: 100vh; padding-bottom: 40px;
+}
+.admin-header {
+  padding: 22px 20px 16px;
+  display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid rgba(201,169,110,0.2);
+}
+.admin-brand { font-family: 'Cormorant Garamond', serif; font-size: 17px; color: var(--admin-gold); letter-spacing: 0.15em; }
+.btn-exit {
+  padding: 7px 14px; border: 1px solid rgba(201,169,110,0.4);
+  border-radius: 20px; background: none; color: var(--admin-gold);
+  font-family: 'Noto Sans JP', sans-serif; font-size: 10px; letter-spacing: 0.12em;
+  cursor: pointer; transition: background 0.2s;
+}
+.btn-exit:hover { background: rgba(201,169,110,0.1); }
+
+.admin
+
+.loading-screen {
+  position: fixed; inset: 0; background: #fff;
+  z-index: 999; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 16px;
+  transition: opacity 0.4s;
+}
+.loading-screen.hide { opacity: 0; pointer-events: none; }
+.loading-logo {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 22px; letter-spacing: 0.2em; color: var(--black);
+}
+.loading-logo span { color: var(--gold); }
+.loading-bar {
+  width: 48px; height: 2px; background: var(--gray-light);
+  border-radius: 2px; overflow: hidden;
+}
+.loading-bar-inner {
+  height: 100%; width: 0%; background: var(--gold);
+  border-radius: 2px; animation: loadbar 1.2s ease forwards;
+}
+@keyframes loadbar { to { width: 100%; } }
+.loading-sub {
+  font-size: 9px; letter-spacing: 0.2em; color: var(--gray);
+  text-transform: uppercase;
+}
+.member-banner {
+  background: var(--black);
+  color: var(--gold);
+  text-align: center;
+  padding: 8px;
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  font-family: 'Noto Sans JP', sans-serif;
+  font-weight: 400;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+.member-icon { font-size: 8px; }
+.week-nav { background: #fff;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 20px 10px;
+}
+.admin-week-label { font-family: 'Cormorant Garamond', serif; font-size: 15px; color: #fff; letter-spacing: 0.08em; }
+.admin-nav-btn {
+  width: 32px; height: 32px; border-radius: 50%;
+  border: 1px solid rgba(201,169,110,0.3); background: none;
+  color: var(--admin-gold); font-size: 16px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.admin-nav-btn:disabled { opacity: 0.25; pointer-events: none; }
+
+.admin-hint { font-size: 10px; color: rgba(255,255,255,0.35); letter-spacing: 0.08em; text-align: center; margin-bottom: 10px; padding: 0 20px; }
+
+.admin.calendar { padding: 0 14px; background: #fff; min-height: 100vh; }
+.admin-day { margin-bottom: 8px; border: 1px solid rgba(201,169,110,0.15); border-radius: 12px; overflow: hidden; }
+.admin-day-head {
+  padding: 8px 14px; background: rgba(201,169,110,0.08);
+  display: flex; align-items: baseline; gap: 8px;
+}
+.admin-day-name { font-family: 'Cormorant Garamond', serif; font-size: 13px; color: var(--admin-gold); letter-spacing: 0.06em; }
+.admin-day-date { font-size: 10px; color: rgba(255,255,255,0.4); letter-spacing: 0.04em; }
+
+.admin-slots { display: grid; grid-template-columns: repeat(4,1fr); gap: 5px; padding: 8px; }
+.aslot {
+  border-radius: 7px; padding: 9px 4px; text-align: center;
+  cursor: pointer; border: 1.5px solid transparent;
+  transition: all 0.14s; -webkit-tap-highlight-color: transparent;
+  position: relative;
+}
+.aslot-t { font-size: 12px; font-weight: 400; letter-spacing: 0.03em; display: block; }
+.aslot-s { font-size: 8px; letter-spacing: 0.06em; display: block; margin-top: 2px; }
+
+.aslot.open { background: rgba(107,168,136,0.15); color: #7DC49A; border-color: rgba(107,168,136,0.25); }
+.aslot.open:hover { background: rgba(107,168,136,0.28); }
+.aslot.few { background: rgba(201,169,110,0.15); color: var(--admin-gold); border-color: rgba(201,169,110,0.25); }
+.aslot.few:hover { background: rgba(201,169,110,0.28); }
+.aslot.closed { background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.25); border-color: rgba(255,255,255,0.07); }
+
+.aslot-badge {
+  position: absolute; top: 3px; right: 4px;
+  width: 14px; height: 14px; border-radius: 50%;
+  font-size: 8px; display: flex; align-items: center; justify-content: center;
+}
+.aslot.open .aslot-badge { background: rgba(107,168,136,0.3); color: #7DC49A; }
+.aslot.few .aslot-badge { background: rgba(201,169,110,0.3); color: var(--admin-gold); }
+.aslot.closed .aslot-badge { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.3); }
+
+.admin-day-off { padding: 12px 14px; font-size: 10px; color: rgba(255,255,255,0.25); text-align: center; letter-spacing: 0.05em; }
+
+/* Status cycle indicator */
+.cycle-hint {
+  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+  background: rgba(201,169,110,0.15); border: 1px solid rgba(201,169,110,0.3);
+  border-radius: 20px; padding: 8px 18px;
+  font-size: 10px; color: var(--admin-gold); letter-spacing: 0.1em;
+  display: flex; gap: 14px; align-items: center;
+  opacity: 0; transition: opacity 0.3s;
+  pointer-events: none;
+}
+.cycle-hint.show { opacity: 1; }
+.ch-item { display: flex; align-items: center; gap: 4px; }
+.ch-dot { width: 6px; height: 6px; border-radius: 50%; }
+
+/* PIN overlay */
+.pin-overlay {
+  position: fixed; inset: 0; background: var(--admin-bg);
+  z-index: 500; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 20px;
+  opacity: 0; pointer-events: none; transition: opacity 0.3s;
+}
+.pin-overlay.show { opacity: 1; pointer-events: all; }
+.pin-title { font-family: 'Cormorant Garamond', serif; font-size: 22px; color: var(--admin-gold); letter-spacing: 0.15em; }
+.pin-sub { font-size: 11px; color: rgba(255,255,255,0.4); letter-spacing: 0.08em; }
+.pin-dots { display: flex; gap: 12px; margin: 4px 0; }
+.pin-dot { width: 12px; height: 12px; border-radius: 50%; border: 1.5px solid rgba(201,169,110,0.5); transition: background 0.2s; }
+.pin-dot.filled { background: var(--admin-gold); border-color: var(--admin-gold); }
+.pin-pad { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; width: 220px; }
+.pin-key {
+  padding: 16px; border: 1px solid rgba(201,169,110,0.2); border-radius: 10px;
+  background: rgba(255,255,255,0.03); color: #fff;
+  font-family: 'Cormorant Garamond', serif; font-size: 20px;
+  cursor: pointer; text-align: center; transition: background 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.pin-key:hover { background: rgba(201,169,110,0.1); }
+.pin-key.del { font-size: 14px; color: rgba(255,255,255,0.4); }
+.pin-error { font-size: 11px; color: #E08080; letter-spacing: 0.08em; opacity: 0; transition: opacity 0.3s; }
+.pin-error.show { opacity: 1; }
+
+/* Toggle: patient / admin switch */
+.admin-toggle {
+  position: fixed; bottom: 22px; right: 18px; z-index: 90;
+  width: 48px; height: 48px; border-radius: 50%;
+  background: var(--black); border: 1px solid var(--gold-light);
+  color: var(--gold); font-size: 18px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  transition: background 0.2s;
+}
+.admin-toggle:hover { background: var(--gold-pale); }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════
+     PATIENT VIEW
+═══════════════════════════════ -->
+
+<div class="loading-screen" id="loadingScreen">
+  <div class="loading-logo">ALOE <span>·</span> 空き時間チェック</div>
+  <div class="loading-bar"><div class="loading-bar-inner"></div></div>
+  <div class="loading-sub">Loading...</div>
+</div>
+<div id="patientView" class="view active">
+  <header>
+    <div class="header-logo">
+      <div class="header-address">大阪府大阪市北区東天満2-10-10 第9田淵ビル203</div>
+      <div class="header-clinic">アロエ鍼灸整体院 南森町院</div>
+    </div>
+    <div class="header-divider"></div>
+    <div class="header-page">
+      <div class="header-page-en">reservation</div>
+      <div class="header-page-ja">空き時間チェック</div>
+    </div>
+  </header>
+
+  <div class="member-banner">
+    <span class="member-icon">✦</span>
+    アロエ会員様限定
+    <span class="member-icon">✦</span>
+  </div>
+
+  <div class="week-nav">
+    <button class="nav-btn" id="pPrev" onclick="pChangeWeek(-1)">‹</button>
+    <span class="week-label" id="pWeekLabel"></span>
+    <button class="nav-btn" id="pNext" onclick="pChangeWeek(1)">›</button>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item"><div class="ldot" style="background:var(--open-color)"></div>空きあり</div>
+    <div class="legend-item"><div class="ldot" style="background:var(--closed-color)"></div>満員</div>
+  </div>
+
+  <div class="calendar" id="patientCal"></div>
+
+  <!-- Bottom Banner -->
+  <div class="bottom-banner" id="banner">
+    <div class="bb-label">選択中の日時</div>
+    <div class="bb-time" id="bannerTime"></div>
+    <button class="btn-line" onclick="openModal()">
+      <div class="line-circle">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="#06C755"><path d="M12 2C6.48 2 2 5.92 2 10.78c0 3.1 1.77 5.82 4.43 7.5-.17.63-.62 2.3-.71 2.65-.11.44.16.44.34.32.14-.09 2.2-1.49 3.09-2.09.9.13 1.87.2 2.85.2 5.52 0 10-3.92 10-8.78S17.52 2 12 2z"/></svg>
+      </div>
+      この時間で予約リクエストを送る
+    </button>
+  </div>
+
+  <!-- Confirm Modal -->
+  <div class="overlay" id="confirmOverlay" onclick="overlayClose(event)">
+    <div class="modal">
+      <div class="modal-title">予約リクエスト</div>
+      <div class="modal-sub">以下のメッセージをコピーして<br>LINEで送信してください</div>
+      <div class="copy-box">
+        <div class="copy-label">📋 送信メッセージ</div>
+        <div class="copy-text" id="copyText"></div>
+      </div>
+      <button class="btn-copy" id="copyBtn" onclick="copyMessage()">
+        コピーする
+      </button>
+      <div class="copy-hint" id="copyHint">コピーしたらLINEを開いて貼り付けて送信してください</div>
+      <button class="btn-confirm" onclick="sendRequest()">
+        <div class="line-circle">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="#06C755"><path d="M12 2C6.48 2 2 5.92 2 10.78c0 3.1 1.77 5.82 4.43 7.5-.17.63-.62 2.3-.71 2.65-.11.44.16.44.34.32.14-.09 2.2-1.49 3.09-2.09.9.13 1.87.2 2.85.2 5.52 0 10-3.92 10-8.78S17.52 2 12 2z"/></svg>
+        </div>
+        LINEを開く
+      </button>
+      <button class="btn-cancel" onclick="overlayClose()">キャンセル</button>
+    </div>
+  </div>
+
+  <!-- Sent Screen -->
+  <div class="sent-screen" id="sentScreen">
+    <div class="sent-icon">✓</div>
+    <div class="sent-title">送信しました</div>
+    <div class="sent-body" id="sentBody"></div>
+    <div class="sent-note">※ スタッフが確認後、LINEにてご連絡いたします</div>
+  </div>
+
+  <!-- Admin Toggle -->
+  <button class="admin-toggle" onclick="showPin()" title="管理者">⚙</button>
+</div>
+
+
+<!-- ═══════════════════════════════
+     ADMIN VIEW
+═══════════════════════════════ -->
+<div id="adminView" class="view">
+  <div class="admin-header">
+    <div class="admin-brand">ALOE · 管理画面</div>
+    <button class="btn-exit" onclick="exitAdmin()">← 患者画面へ</button>
+  </div>
+
+  <div class="admin-week-nav">
+    <button class="admin-nav-btn" id="aPrev" onclick="aChangeWeek(-1)">‹</button>
+    <span class="admin-week-label" id="aWeekLabel"></span>
+    <button class="admin-nav-btn" id="aNext" onclick="aChangeWeek(1)">›</button>
+  </div>
+
+  <div class="admin-hint">タップで「空きあり ⇔ 満員」と切り替えられます</div>
+
+  <div class="admin-calendar" id="adminCal"></div>
+
+  <div class="cycle-hint" id="cycleHint">
+    <div class="ch-item"><div class="ch-dot" style="background:#7DC49A"></div>空き</div>
+    <div style="color:rgba(255,255,255,0.2)">→</div>
+    <div class="ch-item"><div class="ch-dot" style="background:rgba(255,255,255,0.25)"></div>満員</div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════
+     PIN OVERLAY
+═══════════════════════════════ -->
+<div class="pin-overlay" id="pinOverlay">
+  <div class="pin-title">管理者ログイン</div>
+  <div class="pin-sub">4桁のPINを入力してください</div>
+  <div class="pin-dots" id="pinDots">
+    <div class="pin-dot" id="d0"></div>
+    <div class="pin-dot" id="d1"></div>
+    <div class="pin-dot" id="d2"></div>
+    <div class="pin-dot" id="d3"></div>
+  </div>
+  <div class="pin-error" id="pinError">PINが違います</div>
+  <div class="pin-pad">
+    <button class="pin-key" onclick="pinInput('1')">1</button>
+    <button class="pin-key" onclick="pinInput('2')">2</button>
+    <button class="pin-key" onclick="pinInput('3')">3</button>
+    <button class="pin-key" onclick="pinInput('4')">4</button>
+    <button class="pin-key" onclick="pinInput('5')">5</button>
+    <button class="pin-key" onclick="pinInput('6')">6</button>
+    <button class="pin-key" onclick="pinInput('7')">7</button>
+    <button class="pin-key" onclick="pinInput('8')">8</button>
+    <button class="pin-key" onclick="pinInput('9')">9</button>
+    <button class="pin-key del" onclick="pinCancel()">取消</button>
+    <button class="pin-key" onclick="pinInput('0')">0</button>
+    <button class="pin-key del" onclick="pinDel()">⌫</button>
+  </div>
+</div>
+
+
+<script type="module">
+// ─── Firebase ───
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAEvKOv_NguYMk1CoruaeEPTda9BOkSUp0",
+  authDomain: "aloe-booking.firebaseapp.com",
+  databaseURL: "https://aloe-booking-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "aloe-booking",
+  storageBucket: "aloe-booking.firebasestorage.app",
+  messagingSenderId: "582165783242",
+  appId: "1:582165783242:web:35acc88e4f0a7725dd0a33"
+};
+const firebaseApp = initializeApp(firebaseConfig);
+const db = getDatabase(firebaseApp);
+
+// ─── Constants ───
+const ADMIN_PIN = '1101';
+const DAYS_JA = ['日','月','火','水','木','金','土'];
+const TIME_SLOTS = [
+  '11:00','11:30','12:00','12:30','13:00','13:30',
+  '14:00','14:30','15:00','15:30','16:00','16:30',
+  '17:00','17:30','18:00','18:30','19:00','19:30'
+];
+const STATUS_CYCLE = ['open','closed'];
+const STATUS_LABELS = { open:'空きあり', closed:'満員' };
+
+// ─── State ───
+let pWeekOffset = 0;
+let aWeekOffset = 0;
+let selectedSlot = null;
+let pinBuffer = '';
+
+// Slot data: key = "YYYY-MM-DD|HH:MM", value = 'open'|'few'|'closed'
+// Default: all open
+const slotData = {};
+
+function slotKey(date, time) { return `${date}|${time}`; }
+function getStatus(date, time) { return slotData[slotKey(date, time)] || 'open'; }
+function setStatus(date, time, status) {
+  slotData[slotKey(date, time)] = status;
+  const key = date + '_' + time.replace(':', '');
+  set(ref(db, 'minamimorimachi/slots/' + key), status);
+}
+
+// ─── Helpers ───
+function getWeekDates(offset) {
+  const today = new Date();
+  const start = new Date(today);
+  start.setDate(today.getDate() + offset * 7);
+  return Array.from({length:7}, (_,i) => { const d = new Date(start); d.setDate(start.getDate()+i); return d; });
+}
+function dateStr(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+function displayDate(d) { return `${d.getMonth()+1}月${d.getDate()}日（${DAYS_JA[d.getDay()]}）`; }
+function isToday(d) { const t = new Date(); return d.getFullYear()===t.getFullYear()&&d.getMonth()===t.getMonth()&&d.getDate()===t.getDate(); }
+function isPast(d) { const t = new Date(); t.setHours(0,0,0,0); return d < t; }
+function isSlotPast(dateStr, time) {
+  const now = new Date();
+  const [h, m] = time.split(':').map(Number);
+  const slotTime = new Date(dateStr + 'T00:00:00');
+  slotTime.setHours(h, m, 0, 0);
+  return slotTime < now;
+}
+function showView(id) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ─── Patient Calendar ───
+function renderPatient() {
+  const dates = getWeekDates(pWeekOffset);
+  const first = dates[0], last = dates[6];
+  document.getElementById('pWeekLabel').textContent = `${first.getMonth()+1}/${first.getDate()} — ${last.getMonth()+1}/${last.getDate()}`;
+  document.getElementById('pPrev').disabled = pWeekOffset <= 0;
+
+  const cal = document.getElementById('patientCal');
+  cal.innerHTML = '';
+
+  dates.forEach(d => {
+    const ds = dateStr(d);
+    const off = isPast(d);
+    const block = document.createElement('div');
+    block.className = 'day-block';
+
+    const head = document.createElement('div');
+    head.className = 'day-head';
+    head.innerHTML = `<span class="day-name">${DAYS_JA[d.getDay()]}曜日</span><span class="day-date${isToday(d)?' today':''}">${d.getMonth()+1}/${d.getDate()}${isToday(d)?' · TODAY':''}</span>`;
+    block.appendChild(head);
+
+    if (off) {
+      const n = document.createElement('div');
+      n.className = 'day-off';
+      n.textContent = '受付終了';
+      block.appendChild(n);
+    } else {
+      const grid = document.createElement('div');
+      grid.className = 'slots';
+      TIME_SLOTS.forEach(t => {
+        const st = getStatus(ds, t);
+        const isLast = t === '19:30';
+        const el = document.createElement('div');
+        el.className = `slot ${st}${isLast?' last-badge':''}`;
+        el.dataset.date = ds; el.dataset.time = t; el.dataset.display = displayDate(d);
+        el.innerHTML = `<span class="slot-t">${t}</span><span class="slot-s">${isLast?'最終受付':STATUS_LABELS[st]}</span>`;
+        const pastSlot = isSlotPast(ds, t);
+        if (pastSlot) {
+          el.className = `slot closed${isLast?' last-badge':''}`;
+          el.querySelector('.slot-s').textContent = '受付終了';
+        } else if (st !== 'closed') {
+          el.addEventListener('click', () => selectPatientSlot(el));
+        }
+        grid.appendChild(el);
+      });
+      block.appendChild(grid);
+    }
+    cal.appendChild(block);
+  });
+}
+
+function pChangeWeek(dir) {
+  pWeekOffset += dir;
+  deselectAll();
+  renderPatient();
+}
+
+function selectPatientSlot(el) {
+  if (selectedSlot) selectedSlot.classList.remove('sel');
+  if (selectedSlot === el) {
+    selectedSlot = null;
+    document.getElementById('banner').classList.remove('show');
+    return;
+  }
+  selectedSlot = el;
+  el.classList.add('sel');
+  document.getElementById('bannerTime').textContent = `${el.dataset.display}${el.dataset.time}〜`;
+  document.getElementById('banner').classList.add('show');
+}
+
+function deselectAll() {
+  if (selectedSlot) selectedSlot.classList.remove('sel');
+  selectedSlot = null;
+  document.getElementById('banner').classList.remove('show');
+}
+
+function openModal() {
+  if (!selectedSlot) return;
+  const txt = `${selectedSlot.dataset.display}${selectedSlot.dataset.time}〜`;
+  const msg = `【予約リクエスト】
+メニュー：整体・鍼灸
+希望日時：${txt}`;
+  document.getElementById('copyText').textContent = msg;
+  document.getElementById('copyBtn').textContent = 'コピーする';
+  document.getElementById('copyBtn').classList.remove('copied');
+  document.getElementById('copyHint').textContent = 'コピーしたらLINEを開いて貼り付けて送信してください';
+  document.getElementById('confirmOverlay').classList.add('show');
+}
+
+function copyMessage() {
+  const text = document.getElementById('copyText').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copyBtn');
+    btn.textContent = '✓ コピーしました！';
+    btn.classList.add('copied');
+    document.getElementById('copyHint').textContent = '次に「LINEを開く」をタップして貼り付けて送信してください';
+  }).catch(() => {
+    // fallback for older browsers
+    const el = document.getElementById('copyText');
+    const range = document.createRange();
+    range.selectNode(el);
+    window.getSelection().removeAllRanges();
+    window.getSelection().addRange(range);
+    document.execCommand('copy');
+    window.getSelection().removeAllRanges();
+    const btn = document.getElementById('copyBtn');
+    btn.textContent = '✓ コピーしました！';
+    btn.classList.add('copied');
+    document.getElementById('copyHint').textContent = '次に「LINEを開く」をタップして貼り付けて送信してください';
+  });
+}
+
+function overlayClose(e) {
+  if (!e || e.target === document.getElementById('confirmOverlay') || !e) {
+    document.getElementById('confirmOverlay').classList.remove('show');
+  }
+}
+
+function sendRequest() {
+  if (!selectedSlot) return;
+  // LINEのトークを開くだけ（テキストはコピー済み）
+  window.open('https://line.me/R/ti/p/%40653mmgdc', '_blank');
+}
+
+// ─── Admin Calendar ───
+function renderAdmin() {
+  const dates = getWeekDates(aWeekOffset);
+  const first = dates[0], last = dates[6];
+  document.getElementById('aWeekLabel').textContent = `${first.getMonth()+1}/${first.getDate()} — ${last.getMonth()+1}/${last.getDate()}`;
+  document.getElementById('aPrev').disabled = aWeekOffset <= 0;
+
+  const cal = document.getElementById('adminCal');
+  cal.innerHTML = '';
+
+  dates.forEach(d => {
+    const ds = dateStr(d);
+    const off = false;
+    const block = document.createElement('div');
+    block.className = 'admin-day';
+
+    const head = document.createElement('div');
+    head.className = 'admin-day-head';
+    head.innerHTML = `<span class="admin-day-name">${DAYS_JA[d.getDay()]}曜日</span><span class="admin-day-date">${d.getMonth()+1}/${d.getDate()}${isToday(d)?' · TODAY':''}</span>`;
+    block.appendChild(head);
+
+    if (off) {
+      const n = document.createElement('div');
+      n.className = 'admin-day-off';
+      
+      block.appendChild(n);
+    } else {
+      const grid = document.createElement('div');
+      grid.className = 'admin-slots';
+      TIME_SLOTS.forEach(t => {
+        const st = getStatus(ds, t);
+        const icons = { open:'○', few:'△', closed:'×' };
+        const el = document.createElement('div');
+        el.className = `aslot ${st}`;
+        el.dataset.date = ds; el.dataset.time = t;
+        el.innerHTML = `<span class="aslot-badge">${icons[st]}</span><span class="aslot-t">${t}</span><span class="aslot-s">${STATUS_LABELS[st]}</span>`;
+        // 過去の枠は管理画面でも自動リセット表示
+        if (isSlotPast(ds, t)) {
+          el.className = 'aslot closed';
+          el.innerHTML = `<span class="aslot-badge">−</span><span class="aslot-t">${t}</span><span class="aslot-s">受付終了</span>`;
+        } else {
+          el.addEventListener('click', () => cycleStatus(el, ds, t));
+        }
+        grid.appendChild(el);
+      });
+      block.appendChild(grid);
+    }
+    cal.appendChild(block);
+  });
+}
+
+function aChangeWeek(dir) {
+  aWeekOffset += dir;
+  renderAdmin();
+}
+
+let hintTimer;
+function cycleStatus(el, ds, t) {
+  const cur = getStatus(ds, t);
+  const next = cur === 'closed' ? 'open' : 'closed';
+  setStatus(ds, t, next);
+
+  const icons = { open:'○', few:'△', closed:'×' };
+  el.className = `aslot ${next}`;
+  el.innerHTML = `<span class="aslot-badge">${icons[next]}</span><span class="aslot-t">${t}</span><span class="aslot-s">${STATUS_LABELS[next]}</span>`;
+
+  // Show hint briefly
+  const hint = document.getElementById('cycleHint');
+  hint.classList.add('show');
+  clearTimeout(hintTimer);
+  hintTimer = setTimeout(() => hint.classList.remove('show'), 2000);
+}
+
+// ─── PIN ───
+function showPin() {
+  pinBuffer = '';
+  updatePinDots();
+  document.getElementById('pinError').classList.remove('show');
+  document.getElementById('pinOverlay').classList.add('show');
+}
+function pinInput(n) {
+  if (pinBuffer.length >= 4) return;
+  pinBuffer += n;
+  updatePinDots();
+  if (pinBuffer.length === 4) {
+    setTimeout(() => {
+      if (pinBuffer === ADMIN_PIN) {
+        document.getElementById('pinOverlay').classList.remove('show');
+        pinBuffer = '';
+        updatePinDots();
+        showView('adminView');
+        renderAdmin();
+      } else {
+        document.getElementById('pinError').classList.add('show');
+        pinBuffer = '';
+        setTimeout(() => updatePinDots(), 400);
+        setTimeout(() => document.getElementById('pinError').classList.remove('show'), 1800);
+      }
+    }, 200);
+  }
+}
+function pinDel() {
+  pinBuffer = pinBuffer.slice(0,-1);
+  updatePinDots();
+}
+function pinCancel() {
+  pinBuffer = '';
+  updatePinDots();
+  document.getElementById('pinOverlay').classList.remove('show');
+}
+function updatePinDots() {
+  for (let i=0;i<4;i++) {
+    document.getElementById(`d${i}`).classList.toggle('filled', i < pinBuffer.length);
+  }
+}
+
+function exitAdmin() {
+  showView('patientView');
+  renderPatient();
+}
+
+
+// ─── Global exports for onclick handlers ───
+window.pChangeWeek = pChangeWeek;
+window.aChangeWeek = aChangeWeek;
+window.openModal = openModal;
+window.copyMessage = copyMessage;
+window.overlayClose = overlayClose;
+window.sendRequest = sendRequest;
+window.showPin = showPin;
+window.pinInput = pinInput;
+window.pinDel = pinDel;
+window.pinCancel = pinCancel;
+window.exitAdmin = exitAdmin;
+// ─── Init ───
+// Firebaseからリアルタイムでデータ取得
+onValue(ref(db, 'minamimorimachi/slots'), (snapshot) => {
+  const data = snapshot.val() || {};
+  Object.entries(data).forEach(([key, status]) => {
+    const date = key.substring(0, 10);
+    const timeRaw = key.substring(11);
+    const time = timeRaw.substring(0,2) + ':' + timeRaw.substring(2);
+    slotData[slotKey(date, time)] = status;
+  });
+  renderPatient();
+  if (document.getElementById('adminView').classList.contains('active')) {
+    renderAdmin();
+  }
+  // ローディング非表示
+  const ls = document.getElementById('loadingScreen');
+  if (ls) ls.classList.add('hide');
+  setTimeout(() => { if (ls) ls.style.display = 'none'; }, 500);
+});
+renderPatient();
+setInterval(() => { renderPatient(); }, 60000);
+// 0.8秒後に強制的にローディング非表示
+setTimeout(() => {
+  const ls = document.getElementById('loadingScreen');
+  if (ls) { ls.classList.add('hide'); setTimeout(() => { ls.style.display = 'none'; }, 400); }
+}, 800);
+</script>
+</body>
+</html>
